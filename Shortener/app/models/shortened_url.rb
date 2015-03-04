@@ -4,6 +4,15 @@ class ShortenedUrl < ActiveRecord::Base
     primary_key: :id,
     class_name: 'User'
 
+  has_many :visits,
+    foreign_key: :shortened_url_id,
+    primary_key: :id,
+    class_name: 'Visit'
+
+  has_many :visitors,
+    Proc.new { distinct },
+    through: :visits, source: :visitor
+
   validates :submitter_id, :long_url, presence: true
   validates :short_url, presence: true, uniqueness: true
 
@@ -25,5 +34,18 @@ class ShortenedUrl < ActiveRecord::Base
     code
   end
 
+  def num_clicks
+    visits.count
+  end
 
+  def num_uniques
+    visitors.count # don't need distinct becayse if "scope block"
+  end
+
+  def num_recent_uniques
+    visits.where("'created_at' > '#{10.minutes.ago}'")
+          .select(:user_id)
+          .distinct
+          .count
+  end
 end
