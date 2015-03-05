@@ -13,7 +13,18 @@ class ShortenedUrl < ActiveRecord::Base
     Proc.new { distinct },
     through: :visits, source: :visitor
 
-  validates :submitter_id, :long_url, presence: true
+  has_many :taggings,
+    foreign_key: :shortened_url_id,
+    primary_key: :id,
+    class_name: 'Tagging'
+
+  has_many :tags,
+    through: :taggings,
+    source: :topic
+
+  validates :submitter_id, presence: true
+  validates :long_url, presence: true, length: { maximum: 1024 }
+  validate :limit_submissions
   validates :short_url, presence: true, uniqueness: true
 
   def self.create_for_user_and_long_url!(user, long_url)
@@ -43,9 +54,17 @@ class ShortenedUrl < ActiveRecord::Base
   end
 
   def num_recent_uniques
-    visits.where("'created_at' > '#{10.minutes.ago}'")
+    visits.where("'created_at' > ?", 10.minutes.ago)
           .select(:user_id)
           .distinct
           .count
+  end
+
+  private
+
+  def limit_submissions
+    if submitter.submissions_last_minute > 5
+      errors[:base] << "This user is making too many submissions"
+    end
   end
 end

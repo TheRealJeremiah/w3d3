@@ -15,4 +15,8 @@ class User < ActiveRecord::Base
     source: :visited_url
 
   validates :email, :presence => true, :uniqueness => true
+
+  def submissions_last_minute
+    submitted_urls.where("'created_at' > ?", 1.minute.ago).count
+  end
 end
